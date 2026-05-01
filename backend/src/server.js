@@ -1,0 +1,34 @@
+import express from 'express';
+import cors from 'cors';
+import morgan from 'morgan';
+import dotenv from 'dotenv';
+import { prisma } from './config/db.js';
+import authRoutes from './modules/auth/routes.js';
+import workshopRoutes from './modules/workshop/routes.js';
+import dashboardRoutes from './modules/dashboard/routes.js';
+import billingRoutes from './modules/billingRoutes.js';
+import { authenticate } from './middleware/auth.js';
+import { makeCrudRouter } from './modules/commonCrud.js';
+
+dotenv.config();
+const app=express();
+app.use(cors()); app.use(express.json()); app.use(morgan('dev'));
+app.get('/health',(_,res)=>res.json({ok:true}));
+app.use('/api/auth',authRoutes);
+app.use('/api',authenticate);
+app.use('/api/users', makeCrudRouter(prisma.user));
+app.use('/api/customers', makeCrudRouter(prisma.customer));
+app.use('/api/leads', makeCrudRouter(prisma.lead));
+app.use('/api/vehicles', makeCrudRouter(prisma.vehicle));
+app.use('/api/quotations', makeCrudRouter(prisma.quotation));
+app.use('/api/sales', makeCrudRouter(prisma.sale));
+app.use('/api/workshop', workshopRoutes);
+app.use('/api/parts', makeCrudRouter(prisma.part));
+app.use('/api/invoices', billingRoutes);
+app.use('/api/ledger', makeCrudRouter(prisma.ledgerEntry));
+app.use('/api/branches', makeCrudRouter(prisma.branch));
+app.use('/api/settings', makeCrudRouter(prisma.setting));
+app.use('/api/dashboard', dashboardRoutes);
+
+const port=process.env.PORT||4000;
+app.listen(port,()=>console.log(`API running on ${port}`));

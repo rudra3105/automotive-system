@@ -1,0 +1,5 @@
+'use client';
+import { useState } from 'react'; import { useRouter } from 'next/navigation';
+export default function Login(){const [email,setE]=useState('admin@uos.com');const [password,setP]=useState('admin123');const [err,setErr]=useState('');const r=useRouter();
+const submit=async(e)=>{e.preventDefault();const res=await fetch((process.env.NEXT_PUBLIC_API_URL||'http://localhost:4000/api')+'/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});if(!res.ok){setErr('login failed');return;}const d=await res.json();localStorage.setItem('token',d.token);localStorage.setItem('user',JSON.stringify(d.user));r.push('/dashboard');};
+return <div className='max-w-sm mx-auto mt-24 card'><h1 className='text-xl mb-3'>Unified Automotive OS</h1><form onSubmit={submit} className='space-y-2'><input className='border p-2 w-full' value={email} onChange={e=>setE(e.target.value)}/><input type='password' className='border p-2 w-full' value={password} onChange={e=>setP(e.target.value)}/><button className='bg-blue-600 text-white px-3 py-2 rounded w-full'>Login</button>{err}</form></div>}

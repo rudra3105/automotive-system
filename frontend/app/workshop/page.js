@@ -1,0 +1,53 @@
+'use client';
+import { useEffect, useState } from 'react';
+import Layout from '../../components/Layout';
+import { api } from '../../lib/api';
+
+export default function Workshop() {
+  const [list, setList] = useState([]);
+  const [form, setForm] = useState({ customerId: '', vehiclePlate: '', complaint: '', mechanicName: '' });
+
+  const load = () => api('/workshop').then(setList);
+  useEffect(load, []);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const payload = { ...form, customerId: Number(form.customerId) };
+    try {
+      await api('/workshop', { method: 'POST', body: JSON.stringify(payload) });
+    } catch {
+      const q = JSON.parse(localStorage.getItem('offlineJobCards') || '[]');
+      q.push(payload);
+      localStorage.setItem('offlineJobCards', JSON.stringify(q));
+    }
+    setForm({ customerId: '', vehiclePlate: '', complaint: '', mechanicName: '' });
+    load();
+  };
+
+  const generateInvoice = async (id) => {
+    await api(`/workshop/${id}/generate-invoice`, { method: 'POST', body: JSON.stringify({ currency: 'USD' }) });
+    load();
+  };
+
+  useEffect(() => {
+    const sync = async () => {
+      const q = JSON.parse(localStorage.getItem('offlineJobCards') || '[]');
+      for (const item of q) await api('/workshop', { method: 'POST', body: JSON.stringify(item) });
+      localStorage.removeItem('offlineJobCards');
+      load();
+    };
+    window.addEventListener('online', sync);
+    return () => window.removeEventListener('online', sync);
+  }, []);
+
+  return <Layout>
+    <form onSubmit={submit} className='card grid md:grid-cols-4 gap-2'>
+      <input placeholder='Customer ID' className='border p-2' value={form.customerId} onChange={(e) => setForm({ ...form, customerId: e.target.value })} />
+      <input placeholder='Plate' className='border p-2' value={form.vehiclePlate} onChange={(e) => setForm({ ...form, vehiclePlate: e.target.value })} />
+      <input placeholder='Complaint' className='border p-2' value={form.complaint} onChange={(e) => setForm({ ...form, complaint: e.target.value })} />
+      <input placeholder='Mechanic' className='border p-2' value={form.mechanicName} onChange={(e) => setForm({ ...form, mechanicName: e.target.value })} />
+      <button className='bg-emerald-600 text-white rounded p-2'>Create Job Card</button>
+    </form>
+    <div className='mt-3 space-y-2'>{list.map((j) => <div className='card flex justify-between items-center' key={j.id}><div>#{j.id} {j.vehiclePlate} - {j.status}</div><button disabled={!!j.invoiceId} onClick={() => generateInvoice(j.id)} className='text-xs bg-slate-700 text-white rounded px-2 py-1 disabled:opacity-40'>Generate Invoice</button></div>)}</div>
+  </Layout>;
+}
